@@ -1,60 +1,60 @@
 #include <Arduino.h>
-#include <driver/gpio.h>
 #include <stdlib.h>
 
 
-#define period 250
+
+#define BOOT_BUTTON GPIO_NUM_0
+#define LED GPIO_NUM_6
+#define BUTTON GPIO_NUM_35
+#define CONST_PERIOD 250
 
 
 
 
-gpio_config_t io_conf{},led_conf{};
+
 uint32_t last_time;
 uint32_t current_time;
 uint32_t boot_button_time;
-bool any_button_pressed ;
+bool bt_boot = false ;
 bool led_on = false;
+int period = 125;
+
+int speedchange(bool button_state);
 
 void setup() {
-io_conf.pin_bit_mask = (1ULL<<GPIO_NUM_0) | (1ULL<<GPIO_NUM_35);
-io_conf.mode = GPIO_MODE_INPUT;
-io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
-io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
-io_conf.intr_type = GPIO_INTR_DISABLE;
-led_conf.pin_bit_mask = (1ULL<<GPIO_NUM_6);
-led_conf.mode = GPIO_MODE_OUTPUT;
-led_conf.pull_up_en = GPIO_PULLUP_DISABLE;
-led_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;  
-led_conf.intr_type = GPIO_INTR_DISABLE;
 
-  gpio_config(&io_conf);
-  gpio_config(&led_conf);
 Serial.begin(115200);
 Serial.println("Setup is done");
+int variing_period = period;
+pinMode(BUTTON, INPUT_PULLDOWN);
+pinMode(LED, OUTPUT);
 }
 
 void loop() {
   current_time = millis();
-  any_button_pressed = false;
-  if (gpio_get_level(GPIO_NUM_0) == 0  && (current_time - boot_button_time) > period) {
-    Serial.println("Boot button is pressed");
-    
-    boot_button_time = current_time;
-    any_button_pressed = true;
-    led_on = !led_on;
+   
+  if (digitalRead(GPIO_NUM_0) == 0  && (current_time - boot_button_time) > CONST_PERIOD) {
+   boot_button_time = current_time;
+    bt_boot= true;
+    period*=2;
+    Serial.println("Speed is lower 2x than before");
   }
 
-  if (gpio_get_level(GPIO_NUM_35) == 1  && (current_time - last_time) > period) {
-    Serial.println("Button is pressed");
-    last_time = current_time;
-    any_button_pressed = true;
-    gpio_set_level(GPIO_NUM_6, 1);
-    led_on = !led_on;
+  if (digitalRead(GPIO_NUM_35) == HIGH  && (current_time - last_time) > CONST_PERIOD) {
+   last_time = current_time;
+    bt_boot= false;
+    period/=2;
+    Serial.println("Speed is higher 2x than before");
   }
-  if(led_on ){
-    gpio_set_level(GPIO_NUM_6, 1);
-  }
- else{
-    gpio_set_level(GPIO_NUM_6, 0);
-  }
+
+digitalWrite(GPIO_NUM_6, HIGH);
+delay(period);
+digitalWrite(GPIO_NUM_6, LOW);
+delay(period);
+
+
 }
+
+
+
+ 
